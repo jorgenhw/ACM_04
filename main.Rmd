@@ -1,0 +1,85 @@
+---
+title: "ACM_3_main"
+output: html_document
+date: "2024-02-22"
+---
+
+# Setup
+```{r}
+pacman::p_load(tidyverse)# Load the necessary library
+```
+
+# Simulate data
+
+```{r}
+# alien features (six features) (color, arms, eyes, dots, legs)
+
+n <- 100
+
+creature_data <- tibble(
+  color = sample(c(0, 1), n, replace = TRUE),
+  arms = sample(c(0, 1), n, replace = TRUE),
+  eyes = sample(c(0, 1), n, replace = TRUE),
+  dots = sample(c(0, 1), n, replace = TRUE),
+  legs = sample(c(0, 1), n, replace = TRUE)
+)
+
+creature_data <- creature_data %>%
+    mutate(category <- ifelse(eyes == 1 & dots == 1, "danger", "friendly"))
+
+```
+
+# agent modelling
+```{r}
+# Weights
+weights <- c(0.5, 0.2, 0.3, 0.4, 0.5)
+
+# scaling parameter (vector of potential c-calues): tells how much similarty decayes with distance
+c = c(0.1)
+
+# distance function
+distance <- function(vect1, vect2, w) {
+    return(sum(w * abs(vect1 - vect2)))
+}
+
+# similarity function
+similarity <- function(distance, c) {
+    return(exp(-c * distance))
+}
+
+### generative model ###
+gcm <- function(w, c, obs, cat_one, quiet = TRUE) {
+  # create an empty list to save probability of saying "1" for each trial
+  r <- c()
+  
+  ntrials <- nrow(obs)
+  
+  for (i in 1:ntrials) {
+    # If quiet is FALSE, print every ten trials
+    if (!quiet && i %% 10 == 0) {
+      print(paste("i =", i))
+    }
+    # if this is the first trial, or there any category with no exemplars seen yet, set the choice to random
+    if (i == 1 || sum(cat_one[1:(i - 1)]) == 0 || sum(cat_one[1:(i - 1)]) == (i - 1)) {
+      r <- c(r, .5)
+    } else {
+      similarities <- c()
+      # for each previously seen stimulus assess distance and similarity
+      for (e in 1:(i - 1)) {
+        sim <- similarity(distance(obs[i, ], obs[e, ], w), c)
+        similarities <- c(similarities, sim)
+      }
+      # Calculate prob of saying "1" by dividing similarity to 1 by the sum of similarity to 1 and to 2
+      numerator <- 0.5 * sum(similarities[cat_one[1:(i - 1)] == 1])
+      denominator <- 0.5 * sum(similarities[cat_one[1:(i - 1)] == 1]) + 0.5 * sum(similarities[cat_one[1:(i - 1)] == 0])
+      r <- c(r, numerator / denominator)
+    }
+  }
+
+  return(rbinom(ntrials, 1, r))
+}
+
+# Run the function
+
+r <- gcm(weights, c, obs, cat_one, quiet = FALSE)
+```
