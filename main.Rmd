@@ -248,17 +248,13 @@ data <- read.csv("data/AlienData.txt")
 # remove all rows where stimuli contains "pt"
 data <- data %>% filter(!grepl("pt", stimulus))
 
-# filter out category 3 and 4
-data <- data %>% filter(category != 3 & category != 4)
+# filter so that if response is 3 or 4, test is 1, otherwise 2 REMEMBER TO CHANGE THIS ACCORDING TO THE CORRECT SYSTEM
+data$test <- ifelse(data$response == 3 | data$response == 4, 1, 2)
 
 # subsetting data for subject one in session 1
 d_ses1_sub1 <- data %>% subset(
   session == 1 & subject == 1
 )
-head(d_ses1_sub1,1)
-
-# unique number of stimuli
-unique(data$stimulus)
 ```
 
 fitting on real data
@@ -273,13 +269,4 @@ gcm_data_real <- list(
   w_prior_values = c(1,1,1,1,1),
   c_prior_values = c(0, 1) # 0 = mean, 1 = variance
 )
-```
-
-```{r}
-unique(data$category==1)
-
-head(data,10)
-
-
-data_test$test <- ifelse(data$response == 3 | data$response == 4, 0, 1)
 ```
