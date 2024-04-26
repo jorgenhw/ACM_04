@@ -171,7 +171,11 @@ p4 <- simulated_responses %>%
   theme_bw() +
   facet_wrap(w ~ .)
 
-grid.arrange(p3, p4, ncol = 1)
+commbined_simulated <- grid.arrange(p3, p4, ncol = 1)
+commbined_simulated
+
+ggsave("figures/combined_simulated.png", commbined_simulated, width = 10, height = 10)
+
 ```
 
 Compiling stan model
@@ -217,6 +221,11 @@ samples_gcm <- GCM_mod$sample(
   refresh = 500
 )
 ```
+```{r}
+samples_gcm$save_object("simmodels/GCM_sim.rds")
+#samples <- readRDS("simmodels/GCM_read.rds")
+```
+
 
 # assessing model diagnostics
 ```{r}
@@ -239,6 +248,9 @@ c_trace <- ggplot(draws_df, aes(.iteration, c, group = .chain, color = .chain)) 
   theme_classic()
 
 c_trace
+
+ggsave("figures/c_trace_sim.png", c_trace, width = 10, height = 10)
+
 ```
 
 ```{r}
@@ -248,54 +260,62 @@ logit_c_trace <- ggplot(draws_df, aes(.iteration, logit_c, group = .chain, color
   theme_classic()
 
 logit_c_trace
+ggsave("figures/logit_c_trace_sim.png", logit_c_trace, width = 10, height = 10)
 ```
 
 ```{r}
 # trace plot for each weight
-w1_trace <- ggplot(draws_df, aes(.iteration, w[1], group = .chain, color = .chain)) +
+w1_trace <- ggplot(draws_df, aes(.iteration, `w[1]`, group = .chain, color = .chain)) +
   geom_line(alpha = 0.5) +
   theme_classic()
 
-w2_trace <- ggplot(draws_df, aes(.iteration, w[2], group = .chain, color = .chain)) +
+w2_trace <- ggplot(draws_df, aes(.iteration, `w[2]`, group = .chain, color = .chain)) +
   geom_line(alpha = 0.5) +
   theme_classic()
 
-w3_trace <- ggplot(draws_df, aes(.iteration, w[3], group = .chain, color = .chain)) +
+w3_trace <- ggplot(draws_df, aes(.iteration, `w[3]`, group = .chain, color = .chain)) +
   geom_line(alpha = 0.5) +
   theme_classic()
 
-w4_trace <- ggplot(draws_df, aes(.iteration, w[4], group = .chain, color = .chain)) +
+w4_trace <- ggplot(draws_df, aes(.iteration, `w[4]`, group = .chain, color = .chain)) +
   geom_line(alpha = 0.5) +
   theme_classic()
 
-w5_trace <- ggplot(draws_df, aes(.iteration, w[5], group = .chain, color = .chain)) +
+w5_trace <- ggplot(draws_df, aes(.iteration, `w[5]`, group = .chain, color = .chain)) +
   geom_line(alpha = 0.5) +
   theme_classic()
 
 # plot all weight trace plots in one 
-#grid.arrange(w1_trace, w2_trace, w3_trace, w4_trace, w5_trace, ncol = 2)
+weights_trace <- grid.arrange(w1_trace, w2_trace, w3_trace, w4_trace, w5_trace, ncol = 2)
+ggsave("figures/weights_trace_sim.png", weights_trace, width = 10, height = 10)
+
 ```
-
-
 
 # prior posterior pred plots
 
 ```{r}
-ggplot(draws_df) +
+
+c_post_pred <- ggplot(draws_df) +
   geom_histogram(aes(c), alpha = 0.6, fill = "lightblue") +
   geom_histogram(aes(c_prior), alpha = 0.6, fill = "pink") +
   geom_vline(xintercept = d$c[1]) +
   theme_bw()
+
+c_post_pred
+ggsave("figures/c_post_pred_sim.png", c_post_pred, width = 10, height = 10)
 ```
 
 ```{r}
 
-ggplot(draws_df) +
+logit_c_postpred <- ggplot(draws_df) +
   geom_histogram(aes(logit_c), alpha = 0.6, fill = "lightblue") +
   geom_histogram(aes(logit_c_prior), alpha = 0.6, fill = "pink") +
   theme_bw()
 
+logit_c_postpred
+ggsave("figures/logit_c_postpred_sim.png", logit_c_postpred, width = 10, height = 10)
 ```
+
 
 ```{r}
 w1_plot = ggplot(draws_df) +
@@ -331,6 +351,8 @@ w5_plot = ggplot(draws_df) +
 # combined weight trace plots
 combined_weight_traces <- grid.arrange(w1_plot, w2_plot, w3_plot, w4_plot, w5_plot, ncol = 2)
 combined_weight_traces
+
+ggsave("figures/combined_weight_postpred_sim.png", combined_weight_traces, width = 10, height = 10)
 ```
 
 # posterior cloud plots 
@@ -386,15 +408,189 @@ exp_data <- exp_data %>%
 ```
 
 fitting on real data
+
+```{r}
+
+# file <- file.path("stan_model/GCM.stan") this we already have 
+# GCM_mod <- cmdstan_model(file, cpp_options = list(stan_threads = TRUE), stanc_options = list("O1"), pedantic = TRUE) this we already have
+```
+
+
 ```{r}
 gcm_data_real <- list(
   ntrials = nrow(exp_data),
   nfeatures = 5,
   cat_one = exp_data$category,
   y = exp_data$response,
-  obs = as.matrix(d[, c("color",  "legs",  "eyes",  "dots",  "arms")]),
+  obs = as.matrix(exp_data[, c("f1",  "f2",  "f3",  "f4",  "f5")]),
   b = 0.5,
   w_prior_values = c(1,1,1,1,1),
   c_prior_values = c(0, 1) # 0 = mean, 1 = variance
 )
+
+samples_gcm_real <- GCM_mod$sample(
+  data = gcm_data_real,
+  seed = 123,
+  chains = 2,
+  parallel_chains = 2,
+  threads_per_chain = 3,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  refresh = 500
+)
+
+```
+```{r}
+samples_gcm_real$save_object("simmodels/GCM_real.rds")
+#samples <- readRDS("simmodels/GCM_read.rds")
+```
+
+
+# asses the model fit on experimental data
+
+# assessing model diagnostics
+```{r}
+# diagnosing the mdoel
+samples_gcm_real$cmdstan_diagnose()
+```
+
+# model summary
+```{r}
+# sumarizing model
+samples_gcm_real$summary()
+```
+
+# draws DF trace Plotting
+```{r}
+draws_df_real <- as_draws_df(samples_gcm_real$draws())
+
+c_trace_real <- ggplot(draws_df_real, aes(.iteration, c, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+c_trace_real
+
+ggsave("figures/c_trace_real.png", c_trace_real, width = 10, height = 10)
+
+```
+
+```{r}
+# logit_c
+logit_c_trace_real <- ggplot(draws_df_real, aes(.iteration, logit_c, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+logit_c_trace_real
+ggsave("figures/logit_c_trace_real.png", logit_c_trace_real, width = 10, height = 10)
+```
+
+```{r}
+# trace plot for each weight
+w1_trace_real <- ggplot(draws_df_real, aes(.iteration, `w[1]`, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+w2_trace_real <- ggplot(draws_df_real, aes(.iteration, `w[2]`, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+w3_trace_real <- ggplot(draws_df_real, aes(.iteration, `w[3]`, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+w4_trace_real <- ggplot(draws_df_real, aes(.iteration, `w[4]`, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+w5_trace_real <- ggplot(draws_df_real, aes(.iteration, `w[5]`, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+# plot all weight trace plots in one 
+weights_trace_real <- grid.arrange(w1_trace_real, w2_trace_real, w3_trace_real, w4_trace_real, w5_trace_real, ncol = 2)
+ggsave("figures/weights_trace_real.png", weights_trace_real, width = 10, height = 10)
+
+```
+
+# prior posterior pred plots
+
+```{r}
+
+c_post_pred_real <- ggplot(draws_df_real) +
+  geom_histogram(aes(c), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(c_prior), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = d$c[1]) +
+  theme_bw()
+
+c_post_pred_real
+ggsave("figures/c_post_pred_real.png", c_post_pred_real, width = 10, height = 10)
+```
+
+```{r}
+
+logit_c_postpred_real <- ggplot(draws_df_real) +
+  geom_histogram(aes(logit_c), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(logit_c_prior), alpha = 0.6, fill = "pink") +
+  theme_bw()
+
+logit_c_postpred_real
+ggsave("figures/logit_c_postpred__real.png", logit_c_postpred_real, width = 10, height = 10)
+```
+
+
+```{r}
+w1_plot_real = ggplot(draws_df_real) +
+  geom_histogram(aes(`w[1]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[1]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+w2_plot_real = ggplot(draws_df_real) +
+  geom_histogram(aes(`w[2]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[2]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+w3_plot_real = ggplot(draws_df_real) +
+  geom_histogram(aes(`w[3]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[3]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+w4_plot_real = ggplot(draws_df_real) +
+  geom_histogram(aes(`w[4]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[4]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+w5_plot_real = ggplot(draws_df_real) +
+  geom_histogram(aes(`w[5]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[5]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+# combined weight trace plots
+combined_weight_traces_real <- grid.arrange(w1_plot_real, w2_plot_real, w3_plot_real, w4_plot_real, w5_plot_real, ncol = 2)
+combined_weight_traces_real
+
+ggsave("figures/combined_weight_postpred__real.png", combined_weight_traces_real, width = 10, height = 10)
+```
+
+# posterior cloud plots 
+
+```{r}
+cloud_plots_real <- list()
+
+for (i in 1:5) {
+  # create plot for each w[i]
+  cloud_plots_real[[i]] <- ggplot(draws_df_real, aes_string(x = "c", y = paste("`w[", i, "]`", sep = ""))) +
+    geom_point(alpha = 0.6, color = "lightblue") +
+    theme_bw() +
+    ggtitle(paste("Plot of w[", i, "]", sep = ""))
+}
+
+# display all plots looping through the plots list
+for (plot in cloud_plots_real) {
+  print(plot)
+}
 ```
