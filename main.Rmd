@@ -90,7 +90,6 @@ gcm <- function(w, c, obs, cat_one, quiet = TRUE) {
 
 
 ```{r}
-
 # Simulate choices function
 simulate_responses <- function(agent, w, c) {
     
@@ -198,6 +197,10 @@ Fitting the model to simulated data
 d <- simulated_responses %>% subset(
   c == "7.1" & w == "equal"
 )
+```
+
+```{r}
+
 
 gcm_data <- list(
   ntrials = nrow(d),
@@ -221,9 +224,10 @@ samples_gcm <- GCM_mod$sample(
   refresh = 500
 )
 ```
+
 ```{r}
-samples_gcm$save_object("simmodels/GCM_sim.rds")
-#samples <- readRDS("simmodels/GCM_read.rds")
+#samples_gcm$save_object("simmodels/GCM_sim.rds")
+samples <- readRDS("simmodels/GCM_real.rds")
 ```
 
 
