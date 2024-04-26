@@ -269,11 +269,14 @@ w4_trace <- ggplot(draws_df, aes(.iteration, w[4], group = .chain, color = .chai
   theme_classic()
 
 w5_trace <- ggplot(draws_df, aes(.iteration, w[5], group = .chain, color = .chain)) +
-  
-  
-# combined weight trace plots 
-weight_traces <- grid.arrange(w1_trace, w2_trace, w3_trace, w4_trace, w5_trace, ncol = 1)
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+# plot all weight trace plots in one 
+#grid.arrange(w1_trace, w2_trace, w3_trace, w4_trace, w5_trace, ncol = 2)
 ```
+
+
 
 # prior posterior pred plots
 
@@ -385,10 +388,10 @@ exp_data <- exp_data %>%
 fitting on real data
 ```{r}
 gcm_data_real <- list(
-  ntrials = nrow(d_ses1_sub1),
+  ntrials = nrow(exp_data),
   nfeatures = 5,
-  cat_one = d_ses1_sub1$category,
-  y = d_ses1_sub1$response,
+  cat_one = exp_data$category,
+  y = exp_data$response,
   obs = as.matrix(d[, c("color",  "legs",  "eyes",  "dots",  "arms")]),
   b = 0.5,
   w_prior_values = c(1,1,1,1,1),
