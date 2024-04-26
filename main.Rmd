@@ -209,7 +209,7 @@ gcm_data <- list(
 samples_gcm <- GCM_mod$sample(
   data = gcm_data,
   seed = 123,
-  chains = 1,
+  chains = 2,
   parallel_chains = 1,
   threads_per_chain = 4,
   iter_warmup = 1000,
@@ -218,13 +218,13 @@ samples_gcm <- GCM_mod$sample(
 )
 ```
 
-# assessing model
+# assessing model diagnostics
 ```{r}
 # diagnosing the mdoel
 samples_gcm$cmdstan_diagnose()
 ```
 
-# summary
+# model summary
 ```{r}
 # sumarizing model
 samples_gcm$summary()
@@ -234,36 +234,164 @@ samples_gcm$summary()
 ```{r}
 draws_df <- as_draws_df(samples_gcm$draws())
 
-ggplot(draws_df, aes(.iteration, c, group = .chain, color = .chain)) +
+c_trace <- ggplot(draws_df, aes(.iteration, c, group = .chain, color = .chain)) +
   geom_line(alpha = 0.5) +
   theme_classic()
+
+c_trace
+```
+
+```{r}
+# logit_c
+logit_c_trace <- ggplot(draws_df, aes(.iteration, logit_c, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+logit_c_trace
+```
+
+```{r}
+# trace plot for each weight
+w1_trace <- ggplot(draws_df, aes(.iteration, w[1], group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+w2_trace <- ggplot(draws_df, aes(.iteration, w[2], group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+w3_trace <- ggplot(draws_df, aes(.iteration, w[3], group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+w4_trace <- ggplot(draws_df, aes(.iteration, w[4], group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+w5_trace <- ggplot(draws_df, aes(.iteration, w[5], group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+
+# plot all weight trace plots in one 
+#grid.arrange(w1_trace, w2_trace, w3_trace, w4_trace, w5_trace, ncol = 2)
 ```
 
 
+
+# prior posterior pred plots
+
+```{r}
+ggplot(draws_df) +
+  geom_histogram(aes(c), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(c_prior), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = d$c[1]) +
+  theme_bw()
+```
+
+```{r}
+
+ggplot(draws_df) +
+  geom_histogram(aes(logit_c), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(logit_c_prior), alpha = 0.6, fill = "pink") +
+  theme_bw()
+
+```
+
+```{r}
+w1_plot = ggplot(draws_df) +
+  geom_histogram(aes(`w[1]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[1]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+w2_plot = ggplot(draws_df) +
+  geom_histogram(aes(`w[2]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[2]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+w3_plot = ggplot(draws_df) +
+  geom_histogram(aes(`w[3]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[3]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+w4_plot = ggplot(draws_df) +
+  geom_histogram(aes(`w[4]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[4]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+w5_plot = ggplot(draws_df) +
+  geom_histogram(aes(`w[5]`), alpha = 0.6, fill = "lightblue") +
+  geom_histogram(aes(`w_prior[5]`), alpha = 0.6, fill = "pink") +
+  geom_vline(xintercept = 0.2) +
+  theme_bw()
+
+# combined weight trace plots
+combined_weight_traces <- grid.arrange(w1_plot, w2_plot, w3_plot, w4_plot, w5_plot, ncol = 2)
+combined_weight_traces
+```
+
+# posterior cloud plots 
+
+```{r}
+cloud_plots <- list()
+
+for (i in 1:5) {
+  # create plot for each w[i]
+  cloud_plots[[i]] <- ggplot(draws_df, aes_string(x = "c", y = paste("`w[", i, "]`", sep = ""))) +
+    geom_point(alpha = 0.6, color = "lightblue") +
+    theme_bw() +
+    ggtitle(paste("Plot of w[", i, "]", sep = ""))
+}
+
+# display all plots looping through the plots list
+for (plot in cloud_plots) {
+  print(plot)
+}
+```
+
 # on real data
 ```{r}
-# load data
-data <- read.csv("data/AlienData.txt")
+# read and filter the data
+exp_data <- read_csv("data/AlienData.txt") %>%
+  filter(session == 1, subject == 1)
 
-# remove all rows where stimuli contains "pt"
-data <- data %>% filter(!grepl("pt", stimulus))
+# function to process stimulus data
+process_stimulus <- function(stimulus) { 
+  str_replace_all(stimulus, ".jpg|pt", "") %>% # remove occurences of .jpg and pt from stimulus string using regex
+    str_split("") %>% # split the cleaned string into indiv characters
+    unlist() %>% # converts the list of characters into a vector
+    matrix(ncol = 5, byrow = TRUE) %>% # convert the vector into a matrix with 5 columns, fil it by rows w vector elements
+    as.data.frame() # convert the matrix into a data frame where each col is a feature derived from the stimulus
+}
 
-# filter so that if response is 3 or 4, test is 1, otherwise 2 REMEMBER TO CHANGE THIS ACCORDING TO THE CORRECT SYSTEM
-data$test <- ifelse(data$response == 3 | data$response == 4, 1, 2)
+# apply the function to each stimulus and bind rows
+stimulus <- do.call(rbind, lapply(exp_data$stimulus, process_stimulus)) # applies func to each element of exp_data$stimulus, returns list of data frames, binds them by rows
 
-# subsetting data for subject one in session 1
-d_ses1_sub1 <- data %>% subset(
-  session == 1 & subject == 1
-)
+# Add features to exp_data
+feature_names <- paste0("f", 1:5) # generates feature names that are f1, f2, f3, f4, f5, we could consider calling them color, arms, eyes, dots, legs 
+names(stimulus) <- feature_names # sets the column names of the new 'stimulus' data frame to the feature names
+exp_data[feature_names] <- lapply(stimulus, as.numeric) # adds the numeric versions of the features to corresponding new columns in exp_data 
+
+
+exp_data <- exp_data %>%
+  mutate( 
+    category = as.integer(category %% 2 == 0), # if category is even, set to 0, else set to 1
+    response = as.integer(response %% 2 == 0), # if response is even, set to 0, else set to 1
+    correct = as.integer(category == response) # if category is equal to response, set to 1, else set to 0
+  )
+
 ```
 
 fitting on real data
 ```{r}
 gcm_data_real <- list(
-  ntrials = nrow(d_ses1_sub1),
+  ntrials = nrow(exp_data),
   nfeatures = 5,
-  cat_one = d_ses1_sub1$category,
-  y = d_ses1_sub1$response,
+  cat_one = exp_data$category,
+  y = exp_data$response,
   obs = as.matrix(d[, c("color",  "legs",  "eyes",  "dots",  "arms")]),
   b = 0.5,
   w_prior_values = c(1,1,1,1,1),
