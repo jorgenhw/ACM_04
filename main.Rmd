@@ -136,7 +136,7 @@ plan(multisession, workers = availableCores())
 param_df <- dplyr::tibble(
     expand_grid(
         agent = 1:10,
-        c = seq(.1, 2, 0.2),
+        c = seq(.1, 10, 1), # 0.1 to 6 with 0.2 increments 
         w = c("equal", "skewed1", "skewed2")
     )
 )
@@ -145,6 +145,7 @@ simulated_responses <- future_pmap_dfr(param_df,
     simulate_responses,
     .options = furrr_options(seed = TRUE)
 )
+
 ```
 
 ```{r}
@@ -160,6 +161,9 @@ p3 <- simulated_responses %>%
   theme_bw() +
   facet_wrap(c ~ .)
 
+# # save to drive
+ggsave("p3.png", p3, width = 10, height = 10)
+
 p4 <- simulated_responses %>%
   mutate(c = as.factor(c)) %>%
   ggplot(aes(trial, performance, group = c, color = c)) +
@@ -168,7 +172,90 @@ p4 <- simulated_responses %>%
   facet_wrap(w ~ .)
 
 grid.arrange(p3, p4, ncol = 1)
+```
 
-# save plot to file
-ggsave("simulated_responses.png", width = 10, height = 10)
+Compiling stan model
+```{r}
+file <- file.path("stan_model/GCM.stan")
+
+GCM_mod <- cmdstan_model(file, cpp_options = list(stan_threads = TRUE), stanc_options = list("O1"), pedantic = TRUE)
+```
+
+```{r}
+simulated_responses
+```
+
+```{r}
+head(creature_data,1)
+```
+
+Fitting the model to simulated data
+```{r}
+d <- simulated_responses %>% subset(
+  c == "7.1" & w == "equal"
+)
+
+gcm_data <- list(
+  ntrials = nrow(d),
+  nfeatures = 5,
+  cat_one = d$category,
+  y = d$sim_response,
+  obs = as.matrix(d[, c("color",  "legs",  "eyes",  "dots",  "arms")]),
+  b = 0.5,
+  w_prior_values = c(1,1,1,1,1),
+  c_prior_values = c(0, 1) # 0 = mean, 1 = variance
+)
+
+samples_gcm <- GCM_mod$sample(
+  data = gcm_data,
+  seed = 123,
+  chains = 1,
+  parallel_chains = 1,
+  threads_per_chain = 4,
+  iter_warmup = 1000,
+  iter_sampling = 1000,
+  refresh = 500
+)
+```
+
+# assessing model
+```{r}
+# diagnosing the mdoel
+samples_gcm$cmdstan_diagnose()
+```
+
+# summary
+```{r}
+# sumarizing model
+samples_gcm$summary()
+```
+
+# draws DF trace Plotting
+```{r}
+draws_df <- as_draws_df(samples_gcm$draws())
+
+ggplot(draws_df, aes(.iteration, c, group = .chain, color = .chain)) +
+  geom_line(alpha = 0.5) +
+  theme_classic()
+```
+
+
+# on real data
+```{r}
+# load data
+data <- read.csv("data/AlienData.txt")
+
+# remove all rows where stimuli contains "pt"
+data <- data %>% filter(!grepl("pt", stimulus))
+
+# subsetting data for subject one in session 1
+d_ses1_sub1 <- data %>% subset(
+  session == 1 & subject == 1
+)
+# unique number of stimuli
+unique(data$stimulus)
+
+# make a new column designating features of each stimuli
+
+
 ```
