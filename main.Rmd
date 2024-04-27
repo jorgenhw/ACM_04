@@ -445,9 +445,10 @@ samples_gcm_real <- GCM_mod$sample(
 )
 
 ```
+
 ```{r}
-samples_gcm_real$save_object("simmodels/GCM_real.rds")
-#samples <- readRDS("simmodels/GCM_read.rds")
+#samples_gcm_real$save_object("simmodels/GCM_real.rds")
+samples_gcm_real <- readRDS("simmodels/GCM_real.rds")
 ```
 
 
@@ -524,7 +525,6 @@ ggsave("figures/weights_trace_real.png", weights_trace_real, width = 10, height 
 c_post_pred_real <- ggplot(draws_df_real) +
   geom_histogram(aes(c), alpha = 0.6, fill = "lightblue") +
   geom_histogram(aes(c_prior), alpha = 0.6, fill = "pink") +
-  geom_vline(xintercept = d$c[1]) +
   theme_bw()
 
 c_post_pred_real
@@ -547,31 +547,26 @@ ggsave("figures/logit_c_postpred__real.png", logit_c_postpred_real, width = 10, 
 w1_plot_real = ggplot(draws_df_real) +
   geom_histogram(aes(`w[1]`), alpha = 0.6, fill = "lightblue") +
   geom_histogram(aes(`w_prior[1]`), alpha = 0.6, fill = "pink") +
-  geom_vline(xintercept = 0.2) +
   theme_bw()
 
 w2_plot_real = ggplot(draws_df_real) +
   geom_histogram(aes(`w[2]`), alpha = 0.6, fill = "lightblue") +
   geom_histogram(aes(`w_prior[2]`), alpha = 0.6, fill = "pink") +
-  geom_vline(xintercept = 0.2) +
   theme_bw()
 
 w3_plot_real = ggplot(draws_df_real) +
   geom_histogram(aes(`w[3]`), alpha = 0.6, fill = "lightblue") +
   geom_histogram(aes(`w_prior[3]`), alpha = 0.6, fill = "pink") +
-  geom_vline(xintercept = 0.2) +
   theme_bw()
 
 w4_plot_real = ggplot(draws_df_real) +
   geom_histogram(aes(`w[4]`), alpha = 0.6, fill = "lightblue") +
   geom_histogram(aes(`w_prior[4]`), alpha = 0.6, fill = "pink") +
-  geom_vline(xintercept = 0.2) +
   theme_bw()
 
 w5_plot_real = ggplot(draws_df_real) +
   geom_histogram(aes(`w[5]`), alpha = 0.6, fill = "lightblue") +
   geom_histogram(aes(`w_prior[5]`), alpha = 0.6, fill = "pink") +
-  geom_vline(xintercept = 0.2) +
   theme_bw()
 
 # combined weight trace plots
