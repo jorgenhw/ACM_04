@@ -223,6 +223,7 @@ samples_gcm <- GCM_mod$sample(
   iter_sampling = 1000,
   refresh = 500
 )
+
 ```
 
 ```{r}
